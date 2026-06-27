@@ -86,6 +86,24 @@ Compute a Merkle root for ledger records:
 eicg merkle-root examples/ledger_records.json
 ```
 
+Build an inclusion proof for one ledger record:
+
+```powershell
+eicg merkle-proof examples/ledger_records.json 1
+```
+
+Generate a starter AGNT record:
+
+```powershell
+eicg scaffold --candidate "AGNT continuity ledger" --claim "Bounded distributed continuity claim."
+```
+
+Validate a record against the bundled JSON Schema:
+
+```powershell
+eicg validate-schema examples/valid_distributed_record.json
+```
+
 Evaluate a rejected claim:
 
 ```powershell
@@ -109,6 +127,36 @@ A record includes:
 - `non_claim_locks`: explicit boundaries preventing overclaim.
 
 See [examples/valid_distributed_record.json](examples/valid_distributed_record.json).
+
+The JSON Schema lives at [schema/eic_record.schema.json](schema/eic_record.schema.json).
+
+## Verification Features
+
+The first version accepted declared proof fields. The evolved version adds executable verification helpers:
+
+- deterministic canonical JSON hashing,
+- Merkle root computation,
+- Merkle inclusion proof generation,
+- Merkle inclusion proof verification,
+- optional Ed25519 attestation verification when `cryptography` is installed,
+- JSON Schema validation for AGNT-emitted records.
+
+For Ed25519 attestation verification, each attestation may include:
+
+```json
+{
+  "node_id": "node-a",
+  "root": "accepted-root-hex",
+  "public_key": "hex-encoded-ed25519-public-key",
+  "signature": "hex-encoded-signature"
+}
+```
+
+The signed message is:
+
+```text
+node_id:root
+```
 
 ## AGNT Use
 
@@ -164,4 +212,3 @@ eicg evaluate examples/valid_distributed_record.json
 ## License
 
 MIT
-

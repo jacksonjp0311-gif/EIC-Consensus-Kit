@@ -7,7 +7,7 @@ import json
 import sys
 from pathlib import Path
 
-from eic_consensus_kit.proofs import merkle_root
+from eic_consensus_kit.proofs import merkle_proof, merkle_root, verify_merkle_proof
 from eic_consensus_kit.scoring import dump_json, evaluate_record, load_record, result_to_markdown
 
 
@@ -26,6 +26,22 @@ def build_parser() -> argparse.ArgumentParser:
 
     root = sub.add_parser("merkle-root", help="Compute a Merkle root for a JSON list of records.")
     root.add_argument("records_file")
+
+    proof = sub.add_parser("merkle-proof", help="Build a Merkle inclusion proof for a JSON list item.")
+    proof.add_argument("records_file")
+    proof.add_argument("index", type=int)
+
+    verify = sub.add_parser("verify-proof", help="Verify a Merkle inclusion proof.")
+    verify.add_argument("record_file")
+    verify.add_argument("proof_file")
+    verify.add_argument("expected_root")
+
+    scaffold = sub.add_parser("scaffold", help="Print a starter EIC consensus record JSON document.")
+    scaffold.add_argument("--candidate", default="Distributed AGNT continuity ledger")
+    scaffold.add_argument("--claim", default="Bounded distributed continuity claim.")
+
+    schema = sub.add_parser("validate-schema", help="Validate an EIC record against the bundled JSON Schema.")
+    schema.add_argument("record_file")
     return parser
 
 
@@ -38,6 +54,26 @@ def main(argv: list[str] | None = None) -> int:
             if not isinstance(records, list):
                 raise ValueError("records file must contain a JSON list")
             print(merkle_root(records))
+            return 0
+        if args.command == "merkle-proof":
+            records = json.loads(Path(args.records_file).read_text(encoding="utf-8"))
+            if not isinstance(records, list):
+                raise ValueError("records file must contain a JSON list")
+            print(json.dumps(merkle_proof(records, args.index), indent=2))
+            return 0
+        if args.command == "verify-proof":
+            record = json.loads(Path(args.record_file).read_text(encoding="utf-8"))
+            proof = json.loads(Path(args.proof_file).read_text(encoding="utf-8"))
+            if not isinstance(proof, list):
+                raise ValueError("proof file must contain a JSON list")
+            print(str(verify_merkle_proof(record, proof, args.expected_root)).lower())
+            return 0
+        if args.command == "scaffold":
+            print(json.dumps(_scaffold(args.candidate, args.claim), indent=2))
+            return 0
+        if args.command == "validate-schema":
+            _validate_schema(args.record_file)
+            print("valid")
             return 0
 
         result = evaluate_record(load_record(args.record_file))
@@ -54,6 +90,70 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
 
+def _scaffold(candidate: str, claim: str) -> dict[str, object]:
+    return {
+        "candidate": candidate,
+        "claim": claim,
+        "base_collective_gci": 0.0,
+        "distributed_trust_claim": True,
+        "accepted_root": "",
+        "consensus_policy": {
+            "method": "",
+            "quorum_threshold": 0.67,
+            "signature_requirement": "",
+            "root_comparison": "",
+            "fork_handling": "",
+            "timeout": "",
+            "reason": "",
+        },
+        "attestations": [],
+        "disagreement_disclosed": False,
+        "previous_weights": {},
+        "current_weights": {},
+        "weight_policy": {
+            "method": "",
+            "max_drift": 0.25,
+            "evidence_basis": "",
+            "risk_adjustment": "",
+            "normalization": "",
+            "reason": "",
+        },
+        "weight_evidence_supported": False,
+        "compression_claimed": False,
+        "proof_records": [],
+        "retained_proofs": [],
+        "merkle_root": "",
+        "inclusion_proofs_available": False,
+        "retention_policy": {
+            "full_retention_window": "",
+            "compression_method": "",
+            "proof_method": "",
+            "pruning_rule": "",
+            "exception_records": [],
+            "reason": "",
+        },
+        "non_claim_locks": [
+            "consensus is not truth",
+            "quorum is not correctness",
+            "coherence is not truth",
+            "GCI is not sentience",
+        ],
+    }
+
+
+def _validate_schema(record_file: str) -> None:
+    try:
+        import jsonschema
+    except Exception as exc:
+        raise RuntimeError("schema validation requires the optional 'jsonschema' package; install .[dev]") from exc
+
+    record = json.loads(Path(record_file).read_text(encoding="utf-8"))
+    schema_path = Path(__file__).resolve().parents[2] / "schema" / "eic_record.schema.json"
+    if not schema_path.exists():
+        schema_path = Path.cwd() / "schema" / "eic_record.schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    jsonschema.validate(record, schema)
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
-

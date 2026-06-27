@@ -1,4 +1,4 @@
-from eic_consensus_kit import evaluate_record, load_record, merkle_root
+from eic_consensus_kit import evaluate_record, load_record, merkle_proof, merkle_root, verify_merkle_proof
 from eic_consensus_kit.scoring import weight_drift
 
 
@@ -31,3 +31,37 @@ def test_merkle_root_is_deterministic_for_canonical_records():
 
     assert merkle_root(records) == merkle_root([{"a": 1, "b": 2}, {"event": "x"}])
 
+
+def test_merkle_proof_verifies_inclusion():
+    records = [{"cycle": 1}, {"cycle": 2}, {"cycle": 3}]
+    proof = merkle_proof(records, 1)
+
+    assert verify_merkle_proof(records[1], proof, merkle_root(records)) is True
+    assert verify_merkle_proof({"cycle": 99}, proof, merkle_root(records)) is False
+
+
+def test_cli_scaffold_shape_is_importable():
+    from eic_consensus_kit.cli import _scaffold
+
+    scaffold = _scaffold("candidate", "claim")
+
+    assert scaffold["candidate"] == "candidate"
+    assert scaffold["distributed_trust_claim"] is True
+
+
+def test_ed25519_signature_verification_when_crypto_available():
+    try:
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+    except Exception:
+        return
+
+    from eic_consensus_kit.proofs import verify_attestation_signature
+
+    private_key = Ed25519PrivateKey.generate()
+    public_key = private_key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw).hex()
+    root = "abc123"
+    signature = private_key.sign(f"node-a:{root}".encode("utf-8")).hex()
+
+    assert verify_attestation_signature(public_key, signature, root, "node-a") is True
+    assert verify_attestation_signature(public_key, signature, root, "node-b") is False

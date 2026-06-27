@@ -3,7 +3,7 @@
   "claim": "The collective ledger can make a bounded distributed continuity claim with signed quorum, disclosed disagreement, dynamic subgroup weighting, and proof-preserved compression.",
   "base_collective_gci": 0.92,
   "distributed_trust_claim": true,
-  "accepted_root": "9bb2f3fd83a6bd0ad7fb02dcb6d529e4d144d0ccbb7c7808c736a72c2bc56f02",
+  "accepted_root": "2b4eb84ba9907e8a6f5184b16a19325552e971de24f9f93cded4335caacc94fd",
   "consensus_policy": {
     "method": "signed-root-quorum",
     "quorum_threshold": 0.66,
@@ -16,13 +16,13 @@
   "attestations": [
     {
       "node_id": "node-a",
-      "root": "9bb2f3fd83a6bd0ad7fb02dcb6d529e4d144d0ccbb7c7808c736a72c2bc56f02",
+      "root": "2b4eb84ba9907e8a6f5184b16a19325552e971de24f9f93cded4335caacc94fd",
       "available": true,
       "signature_verified": true
     },
     {
       "node_id": "node-b",
-      "root": "9bb2f3fd83a6bd0ad7fb02dcb6d529e4d144d0ccbb7c7808c736a72c2bc56f02",
+      "root": "2b4eb84ba9907e8a6f5184b16a19325552e971de24f9f93cded4335caacc94fd",
       "available": true,
       "signature_verified": true
     },
@@ -58,7 +58,24 @@
     "proof-for-cycle-0001",
     "proof-for-cycle-0002"
   ],
-  "merkle_root": "9bb2f3fd83a6bd0ad7fb02dcb6d529e4d144d0ccbb7c7808c736a72c2bc56f02",
+  "proof_records": [
+    {
+      "cycle": 1,
+      "event": "baseline declared",
+      "actor": "node-a"
+    },
+    {
+      "cycle": 2,
+      "event": "override audited",
+      "actor": "node-b"
+    },
+    {
+      "cycle": 3,
+      "event": "weight drift disclosed",
+      "actor": "node-c"
+    }
+  ],
+  "merkle_root": "2b4eb84ba9907e8a6f5184b16a19325552e971de24f9f93cded4335caacc94fd",
   "inclusion_proofs_available": true,
   "retention_policy": {
     "full_retention_window": "last 90 days",

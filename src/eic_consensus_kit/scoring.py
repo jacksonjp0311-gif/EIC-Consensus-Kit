@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from eic_consensus_kit.models import EICRecord, EvaluationResult
+from eic_consensus_kit.proofs import merkle_root, verify_attestation_signature
 
 
 def clamp01(value: float) -> float:
@@ -101,7 +102,11 @@ def consensus_integrity(record: EICRecord) -> tuple[float, dict[str, float]]:
     available = [node for node in record.attestations if node.available]
     eligible = record.attestations
     accepted = record.accepted_root
-    valid_signed = [node for node in eligible if node.root == accepted and node.signature_verified]
+    valid_signed = [
+        node
+        for node in eligible
+        if node.root == accepted and (node.signature_verified or _signature_verifies(node))
+    ]
     agreeing_available = [node for node in available if node.root == accepted]
 
     quorum_ratio = len(valid_signed) / len(eligible) if eligible else 0.0
@@ -159,8 +164,10 @@ def proof_preservation(record: EICRecord) -> tuple[float, dict[str, float]]:
             "exception_coverage": 1.0,
         }
 
+    computed_root = merkle_root(record.proof_records) if record.proof_records else ""
+    root_matches = bool(record.merkle_root and (not computed_root or computed_root == record.merkle_root))
     retained = 1.0 if record.retained_proofs and record.inclusion_proofs_available else 0.0
-    root = 1.0 if record.merkle_root else 0.0
+    root = 1.0 if root_matches else 0.0
     compression_declared = 1.0 if record.retention_policy.compression_method else 0.0
     exception_coverage = 1.0 if record.retention_policy.exception_records else 0.0
     factors = {
@@ -174,6 +181,12 @@ def proof_preservation(record: EICRecord) -> tuple[float, dict[str, float]]:
         return 0.0, factors
     score = sum(factors.values()) / len(factors)
     return clamp01(score), factors
+
+
+def _signature_verifies(node: Any) -> bool:
+    if not node.public_key or not node.signature:
+        return False
+    return verify_attestation_signature(node.public_key, node.signature, node.root, node.node_id)
 
 
 def weight_drift(previous: dict[str, float], current: dict[str, float]) -> float:
@@ -221,4 +234,3 @@ def result_to_markdown(result: EvaluationResult) -> str:
 
 def dump_json(data: dict[str, Any]) -> str:
     return json.dumps(data, indent=2, sort_keys=True) + "\n"
-

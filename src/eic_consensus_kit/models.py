@@ -51,6 +51,8 @@ class NodeAttestation:
     root: str
     available: bool = True
     signature_verified: bool = False
+    public_key: str = ""
+    signature: str = ""
 
     @classmethod
     def from_raw(cls, raw: Any) -> "NodeAttestation":
@@ -61,6 +63,8 @@ class NodeAttestation:
             root=_text(raw.get("root")),
             available=bool(raw.get("available", True)),
             signature_verified=bool(raw.get("signature_verified", False)),
+            public_key=_text(raw.get("public_key")),
+            signature=_text(raw.get("signature")),
         )
 
 
@@ -147,6 +151,7 @@ class EICRecord:
     weight_evidence_supported: bool = False
     compression_claimed: bool = False
     retained_proofs: tuple[str, ...] = ()
+    proof_records: tuple[Any, ...] = ()
     merkle_root: str = ""
     inclusion_proofs_available: bool = False
     retention_policy: RetentionPolicy = field(default_factory=RetentionPolicy)
@@ -170,6 +175,7 @@ class EICRecord:
             weight_evidence_supported=bool(raw.get("weight_evidence_supported", False)),
             compression_claimed=bool(raw.get("compression_claimed", False)),
             retained_proofs=tuple(map(str, raw.get("retained_proofs", ()))),
+            proof_records=tuple(raw.get("proof_records", ())),
             merkle_root=_text(raw.get("merkle_root")),
             inclusion_proofs_available=bool(raw.get("inclusion_proofs_available", False)),
             retention_policy=RetentionPolicy.from_raw(raw.get("retention_policy")),
@@ -212,4 +218,3 @@ def _text(value: Any) -> str:
     if value is None:
         return ""
     return str(value).strip()
-

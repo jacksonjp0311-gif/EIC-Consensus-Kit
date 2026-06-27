@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jacksonjp0311-gif/eic-consensus-kit/schema/eic_record.schema.json",
+  "title": "EIC Consensus Record",
+  "type": "object",
+  "required": [
+    "candidate",
+    "claim",
+    "base_collective_gci"
+  ],
+  "properties": {
+    "candidate": {
+      "type": "string",
+      "minLength": 1
+    },
+    "claim": {
+      "type": "string",
+      "minLength": 1
+    },
+    "base_collective_gci": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "distributed_trust_claim": {
+      "type": "boolean"
+    },
+    "accepted_root": {
+      "type": "string"
+    },
+    "consensus_policy": {
+      "type": "object",
+      "properties": {
+        "method": { "type": "string" },
+        "quorum_threshold": { "type": "number", "minimum": 0, "maximum": 1 },
+        "signature_requirement": { "type": "string" },
+        "root_comparison": { "type": "string" },
+        "fork_handling": { "type": "string" },
+        "timeout": { "type": "string" },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "attestations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["node_id", "root"],
+        "properties": {
+          "node_id": { "type": "string" },
+          "root": { "type": "string" },
+          "available": { "type": "boolean" },
+          "signature_verified": { "type": "boolean" },
+          "public_key": { "type": "string" },
+          "signature": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "disagreement_disclosed": {
+      "type": "boolean"
+    },
+    "previous_weights": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      }
+    },
+    "current_weights": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      }
+    },
+    "weight_policy": {
+      "type": "object",
+      "properties": {
+        "method": { "type": "string" },
+        "max_drift": { "type": "number", "minimum": 0 },
+        "evidence_basis": { "type": "string" },
+        "risk_adjustment": { "type": "string" },
+        "normalization": { "type": "string" },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "weight_evidence_supported": {
+      "type": "boolean"
+    },
+    "compression_claimed": {
+      "type": "boolean"
+    },
+    "proof_records": {
+      "type": "array"
+    },
+    "retained_proofs": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "merkle_root": {
+      "type": "string"
+    },
+    "inclusion_proofs_available": {
+      "type": "boolean"
+    },
+    "retention_policy": {
+      "type": "object",
+      "properties": {
+        "full_retention_window": { "type": "string" },
+        "compression_method": { "type": "string" },
+        "proof_method": { "type": "string" },
+        "pruning_rule": { "type": "string" },
+        "exception_records": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "non_claim_locks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

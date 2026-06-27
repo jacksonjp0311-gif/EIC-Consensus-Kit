@@ -13,6 +13,15 @@ AGNT cycle completes
   -> outcome is stored in the AGNT ledger
 ```
 
+Before evaluation, AGNT can validate shape and produce proof material:
+
+```powershell
+eicg validate-schema audits/eic_record.json
+eicg merkle-root ledgers/cycle_records.json
+eicg merkle-proof ledgers/cycle_records.json 42
+eicg evaluate audits/eic_record.json --fail-under 0.85
+```
+
 ## Registry Policy
 
 | Outcome | AGNT action |
@@ -36,3 +45,12 @@ It should reject:
 - pruning without retained proof,
 - claims that consensus proves truth or sentience.
 
+## Signature Path
+
+For stronger attestations, AGNT should sign the message:
+
+```text
+node_id:accepted_root
+```
+
+using Ed25519. The record can then include each node's public key and signature. EIC Consensus Kit verifies those signatures when the optional `cryptography` dependency is installed.
