@@ -121,6 +121,18 @@ eicg sign-root --private-key <hex-private-key> --node-id node-a --root <accepted
 eicg verify-attestations examples/valid_distributed_record.json
 ```
 
+Seal a run into an operator bundle:
+
+```powershell
+eicg seal-run examples/ledger_records.json --node-id node-a --proof-limit 3 --output sealed-run.json
+```
+
+Run the combined verification workflow:
+
+```powershell
+eicg verify-run examples/valid_distributed_record.json --profile standard --fail
+```
+
 Evaluate a rejected claim:
 
 ```powershell
@@ -197,7 +209,7 @@ AGNT nodes / ledgers / reviewers
   -> signed root attestations
   -> subgroup weight records
   -> proof-preserved compression records
-  -> eicg evaluate
+  -> eicg seal-run / eicg verify-run
   -> registry, ledger, or promotion decision
 ```
 

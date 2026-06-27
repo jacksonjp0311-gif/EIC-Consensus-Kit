@@ -3,6 +3,7 @@
 from eic_consensus_kit.models import EICRecord, EvaluationResult
 from eic_consensus_kit.profiles import PROFILES, PolicyProfile, get_profile
 from eic_consensus_kit.scoring import evaluate_record, load_record
+from eic_consensus_kit.workflows import seal_run, verify_run
 from eic_consensus_kit.proofs import (
     hash_leaf,
     merkle_proof,
@@ -26,4 +27,6 @@ __all__ = [
     "PROFILES",
     "PolicyProfile",
     "get_profile",
+    "seal_run",
+    "verify_run",
 ]

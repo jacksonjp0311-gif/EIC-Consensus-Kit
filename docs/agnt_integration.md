@@ -19,7 +19,9 @@ Before evaluation, AGNT can validate shape and produce proof material:
 eicg validate-schema audits/eic_record.json
 eicg merkle-root ledgers/cycle_records.json
 eicg merkle-proof ledgers/cycle_records.json 42
+eicg seal-run ledgers/cycle_records.json --node-id node-a --proof-limit 128 --output sealed-run.json
 eicg evaluate audits/eic_record.json --profile standard --fail-under 0.85
+eicg verify-run audits/eic_record.json --profile standard --fail
 ```
 
 ## Registry Policy
@@ -62,3 +64,7 @@ eicg keygen --output node-a.keys.json
 eicg sign-root --private-key <hex-private-key> --node-id node-a --root <accepted-root>
 eicg verify-attestations audits/eic_record.json
 ```
+
+## CI Gate
+
+Use the bundled GitHub Actions workflow as a starting point. It validates the schema, runs tests, and evaluates the example continuity record. For AGNT, replace the example file with the audit record generated during the run.

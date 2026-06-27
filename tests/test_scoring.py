@@ -8,6 +8,7 @@ from eic_consensus_kit import (
     verify_merkle_proof_object,
 )
 from eic_consensus_kit.scoring import weight_drift
+from eic_consensus_kit.workflows import seal_run, verify_run
 
 
 def test_valid_distributed_record_promotes():
@@ -103,3 +104,22 @@ def test_strict_profile_downgrades_when_policy_is_too_loose():
 
     assert result.outcome == "EIC-B"
     assert any("quorum threshold" in action for action in result.required_actions)
+
+
+def test_seal_run_emits_root_attestation_and_proofs():
+    records = [{"cycle": 1}, {"cycle": 2}]
+
+    sealed = seal_run(records, node_id="node-a", proof_limit=1)
+
+    assert sealed["root"] == merkle_root(records)
+    assert sealed["attestation"]["node_id"] == "node-a"
+    assert sealed["proof_count"] == 1
+    assert verify_merkle_proof_object(sealed["proof_objects"][0]) is True
+
+
+def test_verify_run_combines_evaluation_state():
+    payload = verify_run("examples/valid_distributed_record.json")
+
+    assert payload["evaluation"]["outcome"] == "EIC-A"
+    assert payload["profile"] == "standard"
+    assert "attestations" in payload

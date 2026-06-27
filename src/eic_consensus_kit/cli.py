@@ -18,6 +18,7 @@ from eic_consensus_kit.proofs import (
     verify_merkle_proof_object,
 )
 from eic_consensus_kit.scoring import dump_json, evaluate_record, load_record, result_to_markdown
+from eic_consensus_kit.workflows import seal_run, verify_run
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -60,6 +61,19 @@ def build_parser() -> argparse.ArgumentParser:
 
     verify_attestations = sub.add_parser("verify-attestations", help="Verify cryptographic attestations in a record.")
     verify_attestations.add_argument("record_file")
+
+    seal = sub.add_parser("seal-run", help="Seal ledger records into a root, attestation, and proof bundle.")
+    seal.add_argument("records_file")
+    seal.add_argument("--node-id", required=True)
+    seal.add_argument("--private-key", default=None)
+    seal.add_argument("--public-key", default=None)
+    seal.add_argument("--proof-limit", type=int, default=None)
+    seal.add_argument("--output", type=Path, default=None)
+
+    verify_run_parser = sub.add_parser("verify-run", help="Verify schema, attestations, proofs, and scoring together.")
+    verify_run_parser.add_argument("record_file")
+    verify_run_parser.add_argument("--profile", choices=sorted(PROFILES), default="standard")
+    verify_run_parser.add_argument("--fail", action="store_true", help="Exit non-zero when the combined run fails.")
 
     profiles = sub.add_parser("profiles", help="List built-in evaluation profiles.")
     profiles.add_argument("--format", choices=("markdown", "json"), default="markdown")
@@ -127,6 +141,29 @@ def main(argv: list[str] | None = None) -> int:
                 for node in record.attestations
             ]
             print(json.dumps(results, indent=2))
+            return 0
+        if args.command == "seal-run":
+            records = json.loads(Path(args.records_file).read_text(encoding="utf-8"))
+            if not isinstance(records, list):
+                raise ValueError("records file must contain a JSON list")
+            payload = seal_run(
+                records,
+                node_id=args.node_id,
+                private_key=args.private_key,
+                public_key=args.public_key,
+                proof_limit=args.proof_limit,
+            )
+            rendered = json.dumps(payload, indent=2)
+            if args.output:
+                args.output.write_text(rendered + "\n", encoding="utf-8")
+            else:
+                print(rendered)
+            return 0
+        if args.command == "verify-run":
+            payload = verify_run(args.record_file, profile=args.profile)
+            print(json.dumps(payload, indent=2, sort_keys=True))
+            if args.fail and not payload["passed"]:
+                return 2
             return 0
         if args.command == "profiles":
             payload = {
