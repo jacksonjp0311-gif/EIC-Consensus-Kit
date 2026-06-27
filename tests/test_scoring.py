@@ -1,4 +1,12 @@
-from eic_consensus_kit import evaluate_record, load_record, merkle_proof, merkle_root, verify_merkle_proof
+from eic_consensus_kit import (
+    evaluate_record,
+    load_record,
+    merkle_proof,
+    merkle_proof_object,
+    merkle_root,
+    verify_merkle_proof,
+    verify_merkle_proof_object,
+)
 from eic_consensus_kit.scoring import weight_drift
 
 
@@ -40,6 +48,15 @@ def test_merkle_proof_verifies_inclusion():
     assert verify_merkle_proof({"cycle": 99}, proof, merkle_root(records)) is False
 
 
+def test_merkle_proof_object_verifies_inclusion():
+    records = [{"cycle": 1}, {"cycle": 2}, {"cycle": 3}]
+    proof_object = merkle_proof_object(records, 2)
+
+    assert verify_merkle_proof_object(proof_object) is True
+    proof_object["record"] = {"cycle": 99}
+    assert verify_merkle_proof_object(proof_object) is False
+
+
 def test_cli_scaffold_shape_is_importable():
     from eic_consensus_kit.cli import _scaffold
 
@@ -65,3 +82,24 @@ def test_ed25519_signature_verification_when_crypto_available():
 
     assert verify_attestation_signature(public_key, signature, root, "node-a") is True
     assert verify_attestation_signature(public_key, signature, root, "node-b") is False
+
+
+def test_operator_keygen_and_sign_root_when_crypto_available():
+    try:
+        from eic_consensus_kit.crypto import keygen, sign_root
+    except Exception:
+        return
+
+    from eic_consensus_kit.proofs import verify_attestation_signature
+
+    keys = keygen()
+    signature = sign_root(keys.private_key, "abc123", "node-a")
+
+    assert verify_attestation_signature(keys.public_key, signature, "abc123", "node-a") is True
+
+
+def test_strict_profile_downgrades_when_policy_is_too_loose():
+    result = evaluate_record(load_record("examples/valid_distributed_record.json"), profile="strict")
+
+    assert result.outcome == "EIC-B"
+    assert any("quorum threshold" in action for action in result.required_actions)

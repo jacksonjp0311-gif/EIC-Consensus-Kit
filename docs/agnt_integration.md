@@ -19,7 +19,7 @@ Before evaluation, AGNT can validate shape and produce proof material:
 eicg validate-schema audits/eic_record.json
 eicg merkle-root ledgers/cycle_records.json
 eicg merkle-proof ledgers/cycle_records.json 42
-eicg evaluate audits/eic_record.json --fail-under 0.85
+eicg evaluate audits/eic_record.json --profile standard --fail-under 0.85
 ```
 
 ## Registry Policy
@@ -54,3 +54,11 @@ node_id:accepted_root
 ```
 
 using Ed25519. The record can then include each node's public key and signature. EIC Consensus Kit verifies those signatures when the optional `cryptography` dependency is installed.
+
+Operator path:
+
+```powershell
+eicg keygen --output node-a.keys.json
+eicg sign-root --private-key <hex-private-key> --node-id node-a --root <accepted-root>
+eicg verify-attestations audits/eic_record.json
+```

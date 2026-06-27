@@ -7,7 +7,16 @@ import json
 import sys
 from pathlib import Path
 
-from eic_consensus_kit.proofs import merkle_proof, merkle_root, verify_merkle_proof
+from eic_consensus_kit.crypto import keygen, sign_root
+from eic_consensus_kit.profiles import PROFILES
+from eic_consensus_kit.proofs import (
+    merkle_proof,
+    merkle_proof_object,
+    merkle_root,
+    verify_attestation_signature,
+    verify_merkle_proof,
+    verify_merkle_proof_object,
+)
 from eic_consensus_kit.scoring import dump_json, evaluate_record, load_record, result_to_markdown
 
 
@@ -23,6 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--format", choices=("markdown", "json"), default="markdown")
     evaluate.add_argument("--fail-under", type=float, default=None)
     evaluate.add_argument("--output", type=Path, default=None)
+    evaluate.add_argument("--profile", choices=sorted(PROFILES), default="standard")
 
     root = sub.add_parser("merkle-root", help="Compute a Merkle root for a JSON list of records.")
     root.add_argument("records_file")
@@ -30,11 +40,29 @@ def build_parser() -> argparse.ArgumentParser:
     proof = sub.add_parser("merkle-proof", help="Build a Merkle inclusion proof for a JSON list item.")
     proof.add_argument("records_file")
     proof.add_argument("index", type=int)
+    proof.add_argument("--object", action="store_true", help="Emit a self-contained proof object.")
 
     verify = sub.add_parser("verify-proof", help="Verify a Merkle inclusion proof.")
     verify.add_argument("record_file")
     verify.add_argument("proof_file")
     verify.add_argument("expected_root")
+
+    verify_object = sub.add_parser("verify-proof-object", help="Verify a self-contained Merkle proof object.")
+    verify_object.add_argument("proof_file")
+
+    keygen_parser = sub.add_parser("keygen", help="Generate an Ed25519 keypair.")
+    keygen_parser.add_argument("--output", type=Path, default=None, help="Optional path for the keypair JSON.")
+
+    sign = sub.add_parser("sign-root", help="Sign node_id:root with an Ed25519 private key.")
+    sign.add_argument("--private-key", required=True)
+    sign.add_argument("--node-id", required=True)
+    sign.add_argument("--root", required=True)
+
+    verify_attestations = sub.add_parser("verify-attestations", help="Verify cryptographic attestations in a record.")
+    verify_attestations.add_argument("record_file")
+
+    profiles = sub.add_parser("profiles", help="List built-in evaluation profiles.")
+    profiles.add_argument("--format", choices=("markdown", "json"), default="markdown")
 
     scaffold = sub.add_parser("scaffold", help="Print a starter EIC consensus record JSON document.")
     scaffold.add_argument("--candidate", default="Distributed AGNT continuity ledger")
@@ -59,7 +87,8 @@ def main(argv: list[str] | None = None) -> int:
             records = json.loads(Path(args.records_file).read_text(encoding="utf-8"))
             if not isinstance(records, list):
                 raise ValueError("records file must contain a JSON list")
-            print(json.dumps(merkle_proof(records, args.index), indent=2))
+            payload = merkle_proof_object(records, args.index) if args.object else merkle_proof(records, args.index)
+            print(json.dumps(payload, indent=2))
             return 0
         if args.command == "verify-proof":
             record = json.loads(Path(args.record_file).read_text(encoding="utf-8"))
@@ -67,6 +96,60 @@ def main(argv: list[str] | None = None) -> int:
             if not isinstance(proof, list):
                 raise ValueError("proof file must contain a JSON list")
             print(str(verify_merkle_proof(record, proof, args.expected_root)).lower())
+            return 0
+        if args.command == "verify-proof-object":
+            proof_object = json.loads(Path(args.proof_file).read_text(encoding="utf-8"))
+            if not isinstance(proof_object, dict):
+                raise ValueError("proof object file must contain a JSON object")
+            print(str(verify_merkle_proof_object(proof_object)).lower())
+            return 0
+        if args.command == "keygen":
+            keys = keygen()
+            payload = {"public_key": keys.public_key, "private_key": keys.private_key}
+            rendered = json.dumps(payload, indent=2)
+            if args.output:
+                args.output.write_text(rendered + "\n", encoding="utf-8")
+            else:
+                print(rendered)
+            return 0
+        if args.command == "sign-root":
+            print(sign_root(args.private_key, args.root, args.node_id))
+            return 0
+        if args.command == "verify-attestations":
+            record = load_record(args.record_file)
+            results = [
+                {
+                    "node_id": node.node_id,
+                    "root": node.root,
+                    "signature_verified": node.signature_verified
+                    or verify_attestation_signature(node.public_key, node.signature, node.root, node.node_id),
+                }
+                for node in record.attestations
+            ]
+            print(json.dumps(results, indent=2))
+            return 0
+        if args.command == "profiles":
+            payload = {
+                name: {
+                    "promotion_threshold": profile.promotion_threshold,
+                    "quorum_threshold": profile.quorum_threshold,
+                    "max_weight_drift": profile.max_weight_drift,
+                    "require_distributed": profile.require_distributed,
+                    "require_proof_for_compression": profile.require_proof_for_compression,
+                }
+                for name, profile in PROFILES.items()
+            }
+            if args.format == "json":
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            else:
+                print("| Profile | Promotion | Quorum | Max Drift | Distributed | Compression Proof |")
+                print("| --- | --- | --- | --- | --- | --- |")
+                for name, profile in sorted(PROFILES.items()):
+                    print(
+                        f"| {name} | {profile.promotion_threshold:.2f} | {profile.quorum_threshold:.2f} | "
+                        f"{profile.max_weight_drift:.2f} | {str(profile.require_distributed).lower()} | "
+                        f"{str(profile.require_proof_for_compression).lower()} |"
+                    )
             return 0
         if args.command == "scaffold":
             print(json.dumps(_scaffold(args.candidate, args.claim), indent=2))
@@ -76,7 +159,7 @@ def main(argv: list[str] | None = None) -> int:
             print("valid")
             return 0
 
-        result = evaluate_record(load_record(args.record_file))
+        result = evaluate_record(load_record(args.record_file), profile=args.profile)
         rendered = dump_json(result.to_dict()) if args.format == "json" else result_to_markdown(result)
         if args.output:
             args.output.write_text(rendered, encoding="utf-8")

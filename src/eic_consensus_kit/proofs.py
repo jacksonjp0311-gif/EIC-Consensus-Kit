@@ -51,6 +51,18 @@ def merkle_proof(records: list[Any], index: int) -> list[dict[str, str]]:
     return proof
 
 
+def merkle_proof_object(records: list[Any], index: int) -> dict[str, Any]:
+    """Build a self-contained inclusion proof object."""
+
+    return {
+        "record_index": index,
+        "record": records[index],
+        "record_hash": hash_leaf(records[index]),
+        "root": merkle_root(records),
+        "proof": merkle_proof(records, index),
+    }
+
+
 def verify_merkle_proof(record: Any, proof: list[dict[str, str]], expected_root: str) -> bool:
     """Verify a Merkle inclusion proof produced by :func:`merkle_proof`."""
 
@@ -67,6 +79,19 @@ def verify_merkle_proof(record: Any, proof: list[dict[str, str]], expected_root:
     except Exception:
         return False
     return current == expected_root
+
+
+def verify_merkle_proof_object(proof_object: dict[str, Any]) -> bool:
+    """Verify a self-contained proof object returned by :func:`merkle_proof_object`."""
+
+    try:
+        record = proof_object["record"]
+        proof = proof_object["proof"]
+        expected_root = str(proof_object["root"])
+        record_hash = str(proof_object.get("record_hash", ""))
+    except Exception:
+        return False
+    return (not record_hash or record_hash == hash_leaf(record)) and verify_merkle_proof(record, proof, expected_root)
 
 
 def verify_attestation_signature(public_key_hex: str, signature_hex: str, root: str, node_id: str = "") -> bool:

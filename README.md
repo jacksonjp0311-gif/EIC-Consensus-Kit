@@ -80,6 +80,13 @@ Use the score as a gate:
 eicg evaluate examples/valid_distributed_record.json --fail-under 0.85
 ```
 
+Evaluate with a named profile:
+
+```powershell
+eicg evaluate examples/valid_distributed_record.json --profile strict
+eicg profiles
+```
+
 Compute a Merkle root for ledger records:
 
 ```powershell
@@ -90,6 +97,8 @@ Build an inclusion proof for one ledger record:
 
 ```powershell
 eicg merkle-proof examples/ledger_records.json 1
+eicg merkle-proof examples/ledger_records.json 1 --object
+eicg verify-proof-object proof-object.json
 ```
 
 Generate a starter AGNT record:
@@ -102,6 +111,14 @@ Validate a record against the bundled JSON Schema:
 
 ```powershell
 eicg validate-schema examples/valid_distributed_record.json
+```
+
+Generate a node key and sign a ledger root:
+
+```powershell
+eicg keygen --output node-a.keys.json
+eicg sign-root --private-key <hex-private-key> --node-id node-a --root <accepted-root>
+eicg verify-attestations examples/valid_distributed_record.json
 ```
 
 Evaluate a rejected claim:
@@ -140,6 +157,19 @@ The first version accepted declared proof fields. The evolved version adds execu
 - Merkle inclusion proof verification,
 - optional Ed25519 attestation verification when `cryptography` is installed,
 - JSON Schema validation for AGNT-emitted records.
+- operator commands for key generation, root signing, proof export, and attestation verification.
+
+## Policy Profiles
+
+Profiles let AGNT run the same record through different gates:
+
+| Profile | Use |
+| --- | --- |
+| `strict` | High-assurance distributed continuity promotion. |
+| `standard` | Default AGNT continuity gate. |
+| `single-node` | Non-distributed or local continuity records. |
+| `experimental` | Early research runs with softer gates. |
+| `audit-only` | Report factors without promotion pressure. |
 
 For Ed25519 attestation verification, each attestation may include:
 

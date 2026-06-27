@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from eic_consensus_kit.models import EICRecord, EvaluationResult
-from eic_consensus_kit.proofs import merkle_root, verify_attestation_signature
+from eic_consensus_kit.profiles import PolicyProfile, get_profile
+from eic_consensus_kit.proofs import merkle_root, verify_attestation_signature, verify_merkle_proof_object
 
 
 def clamp01(value: float) -> float:
@@ -29,7 +30,8 @@ def load_record(path: str | Path) -> EICRecord:
     return record
 
 
-def evaluate_record(record: EICRecord) -> EvaluationResult:
+def evaluate_record(record: EICRecord, profile: str | PolicyProfile = "standard") -> EvaluationResult:
+    profile_obj = get_profile(profile) if isinstance(profile, str) else profile
     consensus, consensus_factors = consensus_integrity(record)
     weights, weight_factors = dynamic_weight_integrity(record)
     proof, proof_factors = proof_preservation(record)
@@ -44,6 +46,16 @@ def evaluate_record(record: EICRecord) -> EvaluationResult:
         reasons.append("Distributed trust claim collapses because consensus integrity is zero.")
     if record.compression_claimed and proof == 0:
         reasons.append("Continuity claim collapses because compression or pruning lacks retained proof.")
+    if profile_obj.require_distributed and not record.distributed_trust_claim:
+        actions.append(f"Profile '{profile_obj.name}' requires a distributed trust claim.")
+    if record.distributed_trust_claim and record.consensus_policy.quorum_threshold < profile_obj.quorum_threshold:
+        actions.append(
+            f"Profile '{profile_obj.name}' requires quorum threshold >= {profile_obj.quorum_threshold:.2f}."
+        )
+    if record.current_weights and record.weight_policy.max_drift > profile_obj.max_weight_drift:
+        actions.append(
+            f"Profile '{profile_obj.name}' allows max weight drift <= {profile_obj.max_weight_drift:.2f}."
+        )
     if consensus_factors["disagreement_disclosed"] == 0 and record.distributed_trust_claim:
         actions.append("Disclose node disagreement whenever distributed consensus is claimed.")
     if consensus_factors["signed_quorum"] == 0 and record.distributed_trust_claim:
@@ -57,7 +69,7 @@ def evaluate_record(record: EICRecord) -> EvaluationResult:
     if not record.non_claim_locks:
         actions.append("Add non-claim locks: consensus is not truth, quorum is not correctness, GCI is not sentience.")
 
-    outcome = classify(calibrated, consensus, weights, proof, actions)
+    outcome = classify(calibrated, consensus, weights, proof, actions, profile_obj)
     if outcome == "EIC-A":
         reasons.append("Distributed continuity claim is consensus-calibrated, weight-policy-bound, and proof-preserved.")
     elif outcome == "EIC-B":
@@ -70,6 +82,9 @@ def evaluate_record(record: EICRecord) -> EvaluationResult:
         reasons.append("Record is rejected for unsupported distributed continuity claims.")
 
     factors = {}
+    factors["profile.promotion_threshold"] = profile_obj.promotion_threshold
+    factors["profile.quorum_threshold"] = profile_obj.quorum_threshold
+    factors["profile.max_weight_drift"] = profile_obj.max_weight_drift
     factors.update({f"consensus.{key}": value for key, value in consensus_factors.items()})
     factors.update({f"weight.{key}": value for key, value in weight_factors.items()})
     factors.update({f"proof.{key}": value for key, value in proof_factors.items()})
@@ -166,7 +181,8 @@ def proof_preservation(record: EICRecord) -> tuple[float, dict[str, float]]:
 
     computed_root = merkle_root(record.proof_records) if record.proof_records else ""
     root_matches = bool(record.merkle_root and (not computed_root or computed_root == record.merkle_root))
-    retained = 1.0 if record.retained_proofs and record.inclusion_proofs_available else 0.0
+    proof_objects_verified = _retained_proofs_verify(record.retained_proofs)
+    retained = 1.0 if record.retained_proofs and record.inclusion_proofs_available and proof_objects_verified else 0.0
     root = 1.0 if root_matches else 0.0
     compression_declared = 1.0 if record.retention_policy.compression_method else 0.0
     exception_coverage = 1.0 if record.retention_policy.exception_records else 0.0
@@ -189,15 +205,44 @@ def _signature_verifies(node: Any) -> bool:
     return verify_attestation_signature(node.public_key, node.signature, node.root, node.node_id)
 
 
+def _retained_proofs_verify(retained_proofs: tuple[str, ...]) -> bool:
+    """Return true when all JSON proof objects verify, or legacy string labels are present.
+
+    Legacy proof labels are still accepted for compatibility. JSON proof objects
+    are verified cryptographically against their embedded root.
+    """
+
+    for item in retained_proofs:
+        text = str(item).strip()
+        if not text:
+            return False
+        if not text.startswith("{"):
+            continue
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError:
+            return False
+        if not isinstance(parsed, dict) or not verify_merkle_proof_object(parsed):
+            return False
+    return True
+
+
 def weight_drift(previous: dict[str, float], current: dict[str, float]) -> float:
     keys = set(previous) | set(current)
     return sum(abs(current.get(key, 0.0) - previous.get(key, 0.0)) for key in keys)
 
 
-def classify(score: float, consensus: float, weights: float, proof: float, actions: list[str]) -> str:
+def classify(
+    score: float,
+    consensus: float,
+    weights: float,
+    proof: float,
+    actions: list[str],
+    profile: PolicyProfile,
+) -> str:
     if consensus == 0 or proof == 0:
         return "EIC-E"
-    if score >= 0.85 and not actions:
+    if score >= profile.promotion_threshold and not actions:
         return "EIC-A"
     if score >= 0.65:
         return "EIC-B"

@@ -5,7 +5,7 @@ Before promotion:
 ```powershell
 python -m pytest
 eicg validate-schema examples/valid_distributed_record.json
-eicg evaluate examples/valid_distributed_record.json --fail-under 0.85
+eicg evaluate examples/valid_distributed_record.json --profile standard --fail-under 0.85
 ```
 
 Preserve the locks:
