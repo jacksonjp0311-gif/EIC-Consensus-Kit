@@ -1,0 +1,36 @@
+{
+  "candidate": "Unsigned collective ledger",
+  "claim": "The system has distributed historical trust because several nodes say it does.",
+  "base_collective_gci": 0.95,
+  "distributed_trust_claim": true,
+  "accepted_root": "",
+  "consensus_policy": {},
+  "attestations": [
+    {
+      "node_id": "node-a",
+      "root": "root-a",
+      "available": true,
+      "signature_verified": false
+    },
+    {
+      "node_id": "node-b",
+      "root": "root-b",
+      "available": true,
+      "signature_verified": false
+    }
+  ],
+  "disagreement_disclosed": false,
+  "current_weights": {
+    "planner": 0.8,
+    "executor": 0.4
+  },
+  "weight_policy": {},
+  "weight_evidence_supported": false,
+  "compression_claimed": true,
+  "retained_proofs": [],
+  "merkle_root": "",
+  "inclusion_proofs_available": false,
+  "retention_policy": {},
+  "non_claim_locks": []
+}
+

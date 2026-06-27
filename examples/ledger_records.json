@@ -1,0 +1,18 @@
+[
+  {
+    "cycle": 1,
+    "event": "baseline declared",
+    "actor": "node-a"
+  },
+  {
+    "cycle": 2,
+    "event": "override audited",
+    "actor": "node-b"
+  },
+  {
+    "cycle": 3,
+    "event": "weight drift disclosed",
+    "actor": "node-c"
+  }
+]
+

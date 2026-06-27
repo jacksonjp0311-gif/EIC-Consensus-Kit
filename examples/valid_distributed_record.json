@@ -1,0 +1,85 @@
+{
+  "candidate": "Distributed AGNT continuity ledger",
+  "claim": "The collective ledger can make a bounded distributed continuity claim with signed quorum, disclosed disagreement, dynamic subgroup weighting, and proof-preserved compression.",
+  "base_collective_gci": 0.92,
+  "distributed_trust_claim": true,
+  "accepted_root": "9bb2f3fd83a6bd0ad7fb02dcb6d529e4d144d0ccbb7c7808c736a72c2bc56f02",
+  "consensus_policy": {
+    "method": "signed-root-quorum",
+    "quorum_threshold": 0.66,
+    "signature_requirement": "each validator signs the accepted ledger root",
+    "root_comparison": "compare reported node roots against accepted_root",
+    "fork_handling": "forks are disclosed and excluded from promotion until reconciled",
+    "timeout": "30s",
+    "reason": "distributed trust must not depend on one mutable ledger holder"
+  },
+  "attestations": [
+    {
+      "node_id": "node-a",
+      "root": "9bb2f3fd83a6bd0ad7fb02dcb6d529e4d144d0ccbb7c7808c736a72c2bc56f02",
+      "available": true,
+      "signature_verified": true
+    },
+    {
+      "node_id": "node-b",
+      "root": "9bb2f3fd83a6bd0ad7fb02dcb6d529e4d144d0ccbb7c7808c736a72c2bc56f02",
+      "available": true,
+      "signature_verified": true
+    },
+    {
+      "node_id": "node-c",
+      "root": "forked-root-disclosed",
+      "available": true,
+      "signature_verified": false
+    }
+  ],
+  "disagreement_disclosed": true,
+  "previous_weights": {
+    "planner": 0.34,
+    "executor": 0.33,
+    "auditor": 0.33
+  },
+  "current_weights": {
+    "planner": 0.36,
+    "executor": 0.31,
+    "auditor": 0.33
+  },
+  "weight_policy": {
+    "method": "bounded-evidence-weighted-update",
+    "max_drift": 0.1,
+    "evidence_basis": "weights may move only when coverage, external validation, and risk records support the change",
+    "risk_adjustment": "riskier subgroups are capped until audit recovery",
+    "normalization": "weights must sum to 1.0",
+    "reason": "adaptive weights must not hide manipulation or performance overfit"
+  },
+  "weight_evidence_supported": true,
+  "compression_claimed": true,
+  "retained_proofs": [
+    "proof-for-cycle-0001",
+    "proof-for-cycle-0002"
+  ],
+  "merkle_root": "9bb2f3fd83a6bd0ad7fb02dcb6d529e4d144d0ccbb7c7808c736a72c2bc56f02",
+  "inclusion_proofs_available": true,
+  "retention_policy": {
+    "full_retention_window": "last 90 days",
+    "compression_method": "Merkle-root segment commitment",
+    "proof_method": "inclusion proof retained for pruned records",
+    "pruning_rule": "only non-exception records older than full_retention_window may be compressed",
+    "exception_records": [
+      "emergency overrides",
+      "invalid overrides",
+      "baseline drift events",
+      "weight drift events",
+      "consensus forks",
+      "echo collapse events"
+    ],
+    "reason": "compression may reduce storage but must not erase auditability"
+  },
+  "non_claim_locks": [
+    "consensus is not truth",
+    "quorum is not correctness",
+    "coherence is not truth",
+    "GCI is not sentience",
+    "proof of continuity is not proof of value"
+  ]
+}
